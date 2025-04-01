@@ -16,8 +16,9 @@ def generate_audio_files():
     # Get the base filename without extension
     base_filename = Path(json_path).stem
     
-    # Initialize the TTS client
-    tts = ElevenTTS()
+    # Initialize the TTS client with API key from environment
+    api_key = os.environ.get("ELEVENLABS_API_KEY")
+    tts = ElevenTTS(api_key=api_key)
     
     # Process each ID in the JSON
     for key, value in data.items():

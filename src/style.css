@@ -30,6 +30,52 @@
   color: #72777E;
 }
 
+/* Title slide specific styles */
+.title-slide {
+  background-color: #1E293B;
+}
+
+.title-text {
+  font-size: 3rem;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.title-slide .transcript-english {
+  color: #ffffff;
+}
+
+.title-slide .transcript-spanish {
+  color: #E2E8F0;
+}
+
+/* Play button */
+.play-button {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  background-color: #1E293B;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.2s ease;
+}
+
+.play-button:hover:not(:disabled) {
+  background-color: #2D3748;
+}
+
+.play-button:disabled {
+  background-color: #A0AEC0;
+  cursor: not-allowed;
+}
+
 .progress-bar-container {
   position: fixed;
   bottom: 0;

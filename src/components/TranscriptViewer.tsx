@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import TranscriptCard from './TranscriptCard';
 
 interface TranscriptData {
@@ -14,7 +14,7 @@ interface TranscriptViewerProps {
 
 const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ data }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const englishAudioRef = useRef<HTMLAudioElement | null>(null);
   const spanishAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -32,110 +32,87 @@ const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ data }) => {
     : 0;
 
   // Function to play audio
-  const playAudio = () => {
-    console.log('Attempting to play audio...');
+  const playAudio = useCallback(() => {
+    console.log('Attempting to play audio...', {
+      currentIndex,
+      currentEntryKey: currentEntry ? currentEntry[0] : 'none',
+      hasEnglishAudio: !!englishAudioRef.current,
+      hasSpanishAudio: !!spanishAudioRef.current,
+      englishSrc: englishAudioRef.current?.src || 'none',
+      spanishSrc: spanishAudioRef.current?.src || 'none'
+    });
+    
+    // Skip audio for the title slide (id0)
+    if (currentEntry && currentEntry[0] === 'id0') {
+      console.log('Title slide detected, no audio to play, auto-advancing in 3 seconds');
+      setIsPlaying(true);
+      // Auto-advance after 3 seconds
+      setTimeout(() => {
+        setIsPlaying(false);
+        // Only advance if we're still on the title slide
+        if (currentIndex === 0) {
+          setCurrentIndex(1);
+        }
+      }, 3000);
+      return;
+    }
+    
     if (englishAudioRef.current && spanishAudioRef.current) {
-      console.log('Audio elements found, playing English first...');
-      console.log('Current English audio source:', englishAudioRef.current.src);
-      console.log('Current Spanish audio source:', spanishAudioRef.current.src);
-      console.log('Audio elements ready state:', {
-        english: englishAudioRef.current.readyState,
-        spanish: spanishAudioRef.current.readyState
-      });
+      // Get the ID number from the entry key (e.g., 'id1' -> 1)
+      const idNumber = parseInt(currentEntry[0].replace('id', ''), 10);
+      
+      // Recreate the audio element entirely to avoid potential issues
+      const englishSrc = `/podcasts/Park%20Predators/audio/The_Angler-formatted-id${idNumber}-en.mp3`;
+      
+      console.log('Playing English audio from:', englishSrc);
+      
+      // Create new audio element to avoid caching issues
+      const englishAudio = new Audio(englishSrc);
+      englishAudio.onended = () => {
+        console.log('English audio ended, playing Spanish...');
+        
+        // Play Spanish audio when English ends
+        const spanishSrc = `/podcasts/Park%20Predators/audio/The_Angler-formatted-id${idNumber}-es.mp3`;
+        const spanishAudio = new Audio(spanishSrc);
+        
+        spanishAudio.onended = () => {
+          console.log('Spanish audio ended');
+          setIsPlaying(false);
+        };
+        
+        spanishAudio.onerror = (e) => {
+          console.error('Error with Spanish audio:', e);
+          setIsPlaying(false);
+        };
+        
+        spanishAudio.play().catch(error => {
+          console.error('Failed to play Spanish audio:', error);
+          setIsPlaying(false);
+        });
+      };
+      
+      englishAudio.onerror = (e) => {
+        console.error('Error with English audio:', e);
+        setIsPlaying(false);
+      };
       
       setIsPlaying(true);
-      englishAudioRef.current.play().catch(error => {
-        console.error('Error playing English audio:', error);
-        console.error('Error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        });
+      englishAudio.play().catch(error => {
+        console.error('Failed to play English audio:', error);
         setIsPlaying(false);
       });
     } else {
-      console.error('Audio elements not found', {
-        englishRef: englishAudioRef.current,
-        spanishRef: spanishAudioRef.current
-      });
-    }
-  };
-
-  // Handle audio ended
-  const handleAudioEnded = (event: React.SyntheticEvent<HTMLAudioElement, Event>) => {
-    const audioElement = event.currentTarget;
-    console.log('Audio ended event:', {
-      element: audioElement === englishAudioRef.current ? 'English' : 'Spanish',
-      currentTime: audioElement.currentTime,
-      duration: audioElement.duration
-    });
-    
-    if (audioElement === englishAudioRef.current) {
-      console.log('English audio ended, playing Spanish...');
-      spanishAudioRef.current?.play().catch(error => {
-        console.error('Error playing Spanish audio:', error);
-        console.error('Error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        });
-        setIsPlaying(false);
-      });
-    } else if (audioElement === spanishAudioRef.current) {
-      console.log('Spanish audio ended');
+      console.error('Audio elements not found');
       setIsPlaying(false);
     }
-  };
+  }, [currentEntry, currentIndex]);
 
-  // Update audio sources when index changes
+  // Instead, just set isPlaying to false when we navigate
   useEffect(() => {
-    if (englishAudioRef.current && spanishAudioRef.current) {
-      const nextId = currentIndex + 1;
-      const englishSrc = `/podcasts/Park%20Predators/audio/The_Angler-formatted-id${nextId}-en.mp3`;
-      const spanishSrc = `/podcasts/Park%20Predators/audio/The_Angler-formatted-id${nextId}-es.mp3`;
-      
-      console.log(`Updating audio sources for slide ${nextId}:`);
-      console.log(`English: ${englishSrc}`);
-      console.log(`Spanish: ${spanishSrc}`);
-      
-      // Reset isPlaying state when changing audio sources
-      setIsPlaying(false);
-      
-      englishAudioRef.current.src = englishSrc;
-      spanishAudioRef.current.src = spanishSrc;
-      
-      // Add error handlers for audio loading
-      englishAudioRef.current.onerror = (e) => {
-        console.error('Error loading English audio:', e);
-        console.error('Error details:', {
-          error: englishAudioRef.current?.error,
-          networkState: englishAudioRef.current?.networkState
-        });
-      };
-      spanishAudioRef.current.onerror = (e) => {
-        console.error('Error loading Spanish audio:', e);
-        console.error('Error details:', {
-          error: spanishAudioRef.current?.error,
-          networkState: spanishAudioRef.current?.networkState
-        });
-      };
-      
-      // Add load handlers for audio loading
-      englishAudioRef.current.oncanplaythrough = () => {
-        console.log('English audio loaded and ready to play', {
-          readyState: englishAudioRef.current?.readyState,
-          networkState: englishAudioRef.current?.networkState
-        });
-      };
-      spanishAudioRef.current.oncanplaythrough = () => {
-        console.log('Spanish audio loaded and ready to play', {
-          readyState: spanishAudioRef.current?.readyState,
-          networkState: spanishAudioRef.current?.networkState
-        });
-      };
-    }
+    setIsPlaying(false);
   }, [currentIndex]);
 
+  // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
@@ -148,15 +125,19 @@ const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ data }) => {
         );
       } else if (event.key === 'Escape') {
         setCurrentIndex(0);
-      } else if (event.key === 'Enter' && !isPlaying) {
-        console.log('Enter key pressed, isPlaying:', isPlaying);
-        playAudio();
+      } else if (event.key === 'Enter') {
+        if (!isPlaying) {
+          console.log('Enter key pressed, playing audio');
+          playAudio();
+        } else {
+          console.log('Audio already playing, ignoring Enter key');
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [transcriptEntries.length, isPlaying]);
+  }, [transcriptEntries.length, isPlaying, playAudio]);
 
   // Don't render anything if there's no data
   if (!currentData) {
@@ -184,15 +165,23 @@ const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ data }) => {
       <div className="progress-text">
         {currentIndex + 1} / {transcriptEntries.length}
       </div>
-      {/* Hidden audio elements */}
+      
+      {/* Add a play button that's always visible */}
+      <button 
+        className="play-button" 
+        onClick={() => playAudio()} 
+        disabled={isPlaying}
+      >
+        {isPlaying ? 'Playing...' : 'Play'}
+      </button>
+      
+      {/* We're now creating audio elements dynamically, so we don't need these refs */}
       <audio
         ref={englishAudioRef}
-        onEnded={handleAudioEnded}
         preload="auto"
       />
       <audio
         ref={spanishAudioRef}
-        onEnded={handleAudioEnded}
         preload="auto"
       />
     </div>

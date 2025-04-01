@@ -10,6 +10,9 @@ interface TranscriptCardProps {
 }
 
 const TranscriptCard: React.FC<TranscriptCardProps> = ({ id, english, spanish, isVisible }) => {
+  // Check if this is the title slide (id0)
+  const isTitleSlide = id === 'id0';
+
   return (
     <AnimatePresence>
       {isVisible && (
@@ -17,11 +20,11 @@ const TranscriptCard: React.FC<TranscriptCardProps> = ({ id, english, spanish, i
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="transcript-card"
+          className={`transcript-card ${isTitleSlide ? 'title-slide' : ''}`}
         >
           <div className="transcript-container">
             {/* English text */}
-            <div className="transcript-english">
+            <div className={`transcript-english ${isTitleSlide ? 'title-text' : ''}`}>
               {english}
             </div>
             
@@ -29,7 +32,7 @@ const TranscriptCard: React.FC<TranscriptCardProps> = ({ id, english, spanish, i
             <div className="transcript-divider" />
             
             {/* Spanish text */}
-            <div className="transcript-spanish">
+            <div className={`transcript-spanish ${isTitleSlide ? 'title-text' : ''}`}>
               {spanish}
             </div>
           </div>

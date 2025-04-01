@@ -24,7 +24,17 @@ const TranscriptPage: React.FC = () => {
       .then(data => {
         // Remove the original_file field and convert the data to the expected format
         const { original_file, ...transcript } = data;
-        setTranscriptData(transcript);
+        
+        // Add a new slide at the beginning with podcast and episode information
+        const updatedTranscript: TranscriptData = {
+          id0: {
+            en: "Park Predators: The Angler",
+            es: "Park Predators: El Pescador"
+          },
+          ...transcript
+        };
+        
+        setTranscriptData(updatedTranscript);
       })
       .catch(error => {
         console.error('Error loading transcript:', error);
